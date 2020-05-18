@@ -195,7 +195,10 @@ theta = 25
 
 BX = croot * (b / 2 - wf) / (croot - ctip)
 
-st = [l * 0.4, wf]
+jmx = 0.4
+jmz = 0.0
+
+st = [l * jmx, wf, l * jmz]
 
 y = np.linspace(wf, b / 2, 30)
 
@@ -226,11 +229,14 @@ for yi in y:
 chtip = 0.6
 chroot = 3
 bh = 15
-theta = 20
+thetah = 20
 
 BXh = chroot * (bh / 2 - wf) / (chroot - chtip)
 
-sth = [l * 0.9, wf]
+jhx = 0.9
+jhz = 0.0
+
+sth = [l * jhx, wf, l * jhz]
 
 y = np.linspace(wf, bh / 2, 30)
 
@@ -241,7 +247,7 @@ tc = 0.1
 hori_wing_arr = []
 
 for yi in y:
-    xu = np.tan(theta * np.pi / 180) * (yi - wf) + sth[0]
+    xu = np.tan(thetah * np.pi / 180) * (yi - wf) + sth[0]
     cx = (1.0 - (yi - wf) / BXh) * chroot
     xl = xu + cx
 
@@ -260,11 +266,14 @@ for yi in y:
 cvtip = 0.6
 cvroot = 3
 bv = 10
-theta = 45
+thetav = 45
 
 BXv = cvroot * (bv / 2 - wf) / (cvroot - cvtip)
 
-stv = [l * 0.95, wf]
+jvx = 0.95
+jvz = 0.0
+
+stv = [l * jvx, wf, l * jvz]
 
 z = np.linspace(hau, bv / 2, 30)
 
@@ -275,7 +284,7 @@ tc = 0.1
 vert_wing_arr = []
 
 for zi in z:
-    xu = np.tan(theta * np.pi / 180) * (zi - hau) + stv[0]
+    xu = np.tan(thetav * np.pi / 180) * (zi - hau) + stv[0]
     cx = (1.0 - (zi - hau) / BXv) * cvroot
     xl = xu + cx
 
@@ -297,25 +306,24 @@ vert_wing_arr = np.array(vert_wing_arr)
 
 # engine(main wing down)
 lower = -1
-rin = 0.8
-rout = 0.4
-tin = 0.1
+rin = 0.8  # inlet radius
+rout = 0.4  # outlet radius
+tin = 0.1  # margin
 
-len = 4.0
+len = 4.0  # engine length
 
 tx = 0.4
 ty = 0.4
+tcz = 0.4
 
-k = 0.4
-
-joint_point = [l * 0.4 + croot * tx, wf + (b / 2 - wf) * ty, lower * np.max(main_wing_arr[:, 2])]
+joint_point = [l * jmx + croot * tx, wf + (b / 2 - wf) * ty, lower * np.max(main_wing_arr[:, 2])]
 
 zcen = joint_point[2] - tin - rin
 
 # engine curve -> z = ax ** 2 + b * x + c
-x = np.linspace(joint_point[0] - k * len, joint_point[0] + (1 - k) * len, 30)
+x = np.linspace(joint_point[0] - tcz * len, joint_point[0] + (1 - tcz) * len, 30)
 
-az = lower * (rin - rout) / (1 - 2 * k) / len ** 2
+az = lower * (rin - rout) / (1 - 2 * tcz) / len ** 2
 bz = -2 * joint_point[0] * az
 cz = joint_point[2] + bz ** 2 / (4 * az)
 
@@ -343,14 +351,14 @@ for xi in x:
 engine_arr_low = np.array(engine_arr_low)
 
 # engine(main wing upper)
-joint_point = [l * 0.4 + croot * tx, wf + (b / 2 - wf) * ty, np.max(main_wing_arr[:, 2])]
+joint_point = [l * jmx + croot * tx, wf + (b / 2 - wf) * ty, np.max(main_wing_arr[:, 2])]
 
 zcen = joint_point[2] + tin + rin
 
 # engine curve -> z = ax ** 2 + b * x + c
-x = np.linspace(joint_point[0] - k * len, joint_point[0] + (1 - k) * len, 30)
+x = np.linspace(joint_point[0] - tcz * len, joint_point[0] + (1 - tcz) * len, 30)
 
-az = (rin - rout) / (1 - 2 * k) / len ** 2
+az = (rin - rout) / (1 - 2 * tcz) / len ** 2
 bz = -2 * joint_point[0] * az
 cz = joint_point[2] + bz ** 2 / (4 * az)
 
@@ -382,26 +390,27 @@ rin = 0.8
 rout = 0.4
 tin = 0.1
 
-k = 0.4
+
 len = 5.0
 
-theta = 30
+thetae = 30
 tx = 0.7
+tcz = 0.4
 
 eca = np.max(cabin_arr[:, 1])
 ecb = np.max(cabin_arr[:, 2])
 
-r = np.sqrt((eca * np.cos(theta * np.pi / 180.0)) ** 2 + (ecb * np.cos(theta * np.pi / 180.0) ** 2))
+r = np.sqrt((eca * np.cos(thetae * np.pi / 180.0)) ** 2 + (ecb * np.cos(thetae * np.pi / 180.0) ** 2))
 
-joint_point = [l * tx, r * np.cos(theta * np.pi / 180.0), r * np.sin(theta * np.pi / 180.0)]
+joint_point = [l * tx, r * np.cos(thetae * np.pi / 180.0), r * np.sin(thetae * np.pi / 180.0)]
 
-zcen = (r + rin + tin) * np.sin(theta * np.pi / 180.0)
+zcen = (r + rin + tin) * np.sin(thetae * np.pi / 180.0)
 
-az = (rin - rout) * np.cos(theta * np.pi / 180.0) / (1 - 2 * k) / len ** 2
-bz = (k * len - 2 * joint_point[0]) * az - tin * np.cos(theta * np.pi / 180.0) / (k * len)
-cz = joint_point[2] - (rin + tin) * np.cos(theta * np.pi / 180.0) - az * joint_point[0] ** 2 - bz * joint_point[0]
+az = (rin - rout) * np.cos(thetae * np.pi / 180.0) / (1 - 2 * tcz) / len ** 2
+bz = (tcz * len - 2 * joint_point[0]) * az - tin * np.cos(thetae * np.pi / 180.0) / (tcz * len)
+cz = joint_point[2] - (rin + tin) * np.cos(thetae * np.pi / 180.0) - az * joint_point[0] ** 2 - bz * joint_point[0]
 
-x = np.linspace(joint_point[0] - k * len, joint_point[0] + (1 - k) * len, 30)
+x = np.linspace(joint_point[0] - tcz * len, joint_point[0] + (1 - tcz) * len, 30)
 
 engine_fus_arr_up = []
 
