@@ -118,7 +118,7 @@ x = np.linspace(l2, l3, 50)
 bezier_zu = []
 bezier_zl = []
 
-qzu = np.array([[l2, huf], [l3, hau], [l3, hau]])
+qzu = np.array([[l2, huf], [l2 + (l3 - l2) * 0.5, hau], [l3, hau]])
 qzl = np.array([[l2, -hlf], [l3, -hlc], [l3, 0]])
 
 bezier_y = []
@@ -268,14 +268,14 @@ cvroot = 3
 bv = 10
 thetav = 45
 
-BXv = cvroot * (bv / 2 - wf) / (cvroot - cvtip)
+BXv = cvroot * (bv * 0.5 - hau) / (cvroot - cvtip)
 
 jvx = 0.95
 jvz = 0.0
 
 stv = [l * jvx, wf, l * jvz]
 
-z = np.linspace(hau, bv / 2, 30)
+z = np.linspace(hau, bv * 0.5, 30)
 
 # airfoil
 p = 0.4

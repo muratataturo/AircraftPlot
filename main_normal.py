@@ -1,8 +1,16 @@
 import numpy as np
 import argparse
 import pandas as pd
+from .component import *
 import matplotlib.pyplot as plt
 
+def load_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cname', default='a320', type=str)
+
+    args = parser.parse_args()
+
+    return args
 
 def insert_args():
     # setting argument class
@@ -79,6 +87,70 @@ def insert_args():
     return args
 
 
+class Arguments(object):
+
+    def __init__(self, args):
+
+        cname = args.cname
+
+        fname = './AircraftData/{}.csv'.format(cname)
+
+        df = pd.read_csv(fname, index_col=0)
+        self.huc = df['huc'].values[0]
+        self.hlc = df['hlc'].values[0]
+        self.wc = df['wc'].values[0]
+
+        self.hlf = df['hlf'].values[0]
+        self.huf = df['huf'].values[0]
+        self.wf = df['wf'].values[0]
+
+        self.hau = df['hau'].values[0]
+        self.wa = df['wa'].values[0]
+
+        self.l1 = df['l1'].values[0]
+        self.l2 = df['l2'].values[0]
+        self.l3 = df['l3'].values[0]
+
+        self.uk = df['uk'].values[0]
+
+        self.ctip = df['ctip'].values[0]
+        self.croot = df['croot'].values[0]
+        self.b = df['b'].values[0]
+        self.theta = df['theta'].values[0]
+        self.jmx = df['jmx'].values[0]
+        self.jmz = df['jmz'].values[0]
+        self.pm = df['pm'].values[0]
+        self.tcm = df['tcm'].values[0]
+
+        self.chtip = df['chtip'].values[0]
+        self.chroot = df['chroot'].values[0]
+        self.bh = df['bh'].values[0]
+        self.thetah = df['thetah'].values[0]
+        self.jhx = df['jhx'].values[0]
+        self.jhz = df['jhz'].values[0]
+        self.ph = df['ph'].values[0]
+        self.tch = df['tch'].values[0]
+
+        self.cvtip = df['cvtip'].values[0]
+        self.cvroot = df['cvroot'].values[0]
+        self.bv = df['bv'].values[0]
+        self.thetav = df['thetav'].values[0]
+        self.jvx = df['jvx'].values[0]
+        self.jvz = df['jvz'].values[0]
+        self.pv = df['pv'].values[0]
+        self.tcv = df['tcv'].values[0]
+
+        self.rein = df['rein'].values[0]
+        self.reout = df['reout'].values[0]
+        self.tein = df['tein'].values[0]
+        self.le = df['le'].values[0]
+        self.tcx = df['tcx'].values[0]
+        self.tcy = df['tcy'].values[0]
+        self.tcz = df['tcz'].values[0]
+        self.thetae = df['thetae'].values[0]
+
+
+
 if __name__ == '__main__':
 
     names = ['huc', 'hlc', 'wc',
@@ -91,10 +163,26 @@ if __name__ == '__main__':
              'cvtip', 'cvroot', 'bv', 'thetav', 'jvx', 'jvz', 'pv', 'tcv',
              'rein', 'reout', 'tein', 'le', 'tcx', 'tcy', 'tcz', 'thetae']
 
-    args = insert_args()
+    mode = 'insert'  # 'insert' or 'load'
 
-    cname = args.cname
+    if mode == 'insert':
+        args = insert_args()
 
+    else:
+        l_args = load_args()
+        args = Arguments(l_args)
+
+    # build cockpit array
+    cockpit_arr = compute_cockpit_arr(args)
+    # build cabin array
+    cabin_arr = compute_cabin_arr(args)
+    # build after cabin array
+    after_cabin_arr = compute_after_cabin_arr(args)
+
+
+    """
+    # test code
+    cname = 'a320'
     fname = './AircraftData/{}.csv'.format(cname)
 
     if fname:
@@ -213,7 +301,7 @@ if __name__ == '__main__':
               cvtip, cvroot, bv, thetav, jvx, jvz, pv, tcv,
               rein, reout, tein, le, tcx, tcy, tcz, thetae]
 
-    """
+    
     # create new file
     f = open(fname, 'w')
     f.close()
