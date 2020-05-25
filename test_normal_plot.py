@@ -136,7 +136,10 @@ for xi, bzl, bzu, by in zip(x, bezier_zl, bezier_zu, bezier_y):
 
     for yi in y:
         zui = bzu * np.sqrt(1 - yi ** 2 / by ** 2)
-        zli = bzl * np.sqrt(1 - yi ** 2/ by ** 2)
+        zli = bzl * np.sqrt(1 - yi ** 2 / by ** 2)
+
+        if np.isnan(zui):
+            zui, zli = 0, 0
 
         after_cabin_arr.append([xi, yi, zui])
         after_cabin_arr.append([xi, yi, zli])

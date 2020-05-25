@@ -1,9 +1,13 @@
 import numpy as np
 import argparse
 import pandas as pd
-from .component import *
+from component import compute_cockpit_arr, compute_cabin_arr, compute_after_cabin_arr
+from component import compute_main_wing_arr, compute_horizontal_wing, compute_vertical_wing
+from component import compute_engine_lower_main_wing, compute_engine_upper_main_wing, compute_engine_upper_cabin
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
+# load arguments
 def load_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--cname', default='a320', type=str)
@@ -12,6 +16,8 @@ def load_args():
 
     return args
 
+
+# function to create database
 def insert_args():
     # setting argument class
     parser = argparse.ArgumentParser()
@@ -19,6 +25,8 @@ def insert_args():
     # add the arguments
     # case name
     parser.add_argument('--cname', default='a320', type=str)
+    # engine settings
+    parser.add_argument('--engine_settings', default='lower_mainwing', type=str, help='1.lower_mainwing, 2.upper_mainwing, 3. upper_cabin')
     # cockpit
     parser.add_argument('--huc', default=1.8, type=float, help='height of upper part of cockpit [m]')
     parser.add_argument('--hlc', default=1.8, type=float, help='height of lower part of cockpit [m]')
@@ -87,6 +95,7 @@ def insert_args():
     return args
 
 
+# Argument class(To manage database parameters)
 class Arguments(object):
 
     def __init__(self, args):
@@ -96,6 +105,7 @@ class Arguments(object):
         fname = './AircraftData/{}.csv'.format(cname)
 
         df = pd.read_csv(fname, index_col=0)
+        self.engine_settings = df['engine_settings'].values[0]
         self.huc = df['huc'].values[0]
         self.hlc = df['hlc'].values[0]
         self.wc = df['wc'].values[0]
@@ -150,9 +160,26 @@ class Arguments(object):
         self.thetae = df['thetae'].values[0]
 
 
+# draw function
+def draw_aircraft(component_dict, axis_bounds):
+
+    fig = plt.figure()
+    ax = Axes3D(fig)
+
+    for name, arr in component_dict.items():
+
+        ax.scatter(arr[:, 0], arr[:, 1], arr[:, 2])
+
+    ax.set_xlim(axis_bounds[0])
+    ax.set_ylim(axis_bounds[1])
+    ax.set_zlim(axis_bounds[2])
+
+    plt.show()
+
 
 if __name__ == '__main__':
 
+    # variables names
     names = ['huc', 'hlc', 'wc',
              'hlf', 'huf', 'wf',
              'hau', 'wa',
@@ -163,7 +190,8 @@ if __name__ == '__main__':
              'cvtip', 'cvroot', 'bv', 'thetav', 'jvx', 'jvz', 'pv', 'tcv',
              'rein', 'reout', 'tein', 'le', 'tcx', 'tcy', 'tcz', 'thetae']
 
-    mode = 'insert'  # 'insert' or 'load'
+    # data type
+    mode = 'load'  # 'insert' or 'load'
 
     if mode == 'insert':
         args = insert_args()
@@ -172,12 +200,48 @@ if __name__ == '__main__':
         l_args = load_args()
         args = Arguments(l_args)
 
+    # main
     # build cockpit array
     cockpit_arr = compute_cockpit_arr(args)
     # build cabin array
     cabin_arr = compute_cabin_arr(args)
     # build after cabin array
     after_cabin_arr = compute_after_cabin_arr(args)
+    # build main wing array
+    main_wing_arr = compute_main_wing_arr(args)
+    # build horizontal wing array
+    hori_wing_arr = compute_horizontal_wing(args)
+    # build vertical wing array
+    vert_wing_arr = compute_vertical_wing(args)
+
+    # engine part
+    if args.engine_settings == 'lower_mainwing':
+        engine_arr = compute_engine_lower_main_wing(args, main_wing_arr)
+
+    elif args.engine_settings == 'upper_mainwing':
+        engine_arr = compute_engine_upper_main_wing(args, main_wing_arr)
+
+    elif args.engine_settings == 'upper_cabin':
+        engine_arr = compute_engine_upper_cabin(args, cabin_arr)
+
+    # component names
+    component_names = ['cockpit', 'cabin', 'after_cabin', 'main_wing', 'hori_wing', 'vert_wing', 'engine']
+    # component_arrays
+    component_arrs = [cockpit_arr, cabin_arr, after_cabin_arr, main_wing_arr, hori_wing_arr, vert_wing_arr, engine_arr]
+
+    # create component dictionary
+    component_dict = {}
+
+    for key, val in zip(component_names, component_arrs):
+        component_dict[key] = val
+
+    # draw aircraft
+    axis_bounds = [[-10, 40], [-20, 20], [-15, 15]]
+    draw_aircraft(component_dict, axis_bounds)
+
+
+
+
 
 
     """

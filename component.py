@@ -1,5 +1,5 @@
 import numpy as np
-from .helper import bezier
+from helper import bezier
 # helper function for view
 
 
@@ -135,9 +135,9 @@ def compute_after_cabin_arr(arg_class):
 
     # compute bezier curve
     for t in np.linspace(0, 1, 50):
-        bezier_zu.append(bezier(qzu.shape[0] - 1, t, qzu))
-        bezier_zl.append(bezier(qzl.shape[0] - 1, t, qzl))
-        bezier_y.append(bezier(qy.shape[0] - 1, t, qy))
+        bezier_zu.append(bezier(qzu.shape[0] - 1, t, qzu)[1])
+        bezier_zl.append(bezier(qzl.shape[0] - 1, t, qzl)[1])
+        bezier_y.append(bezier(qy.shape[0] - 1, t, qy)[1])
 
     # compute after cabin array
     after_cabin_arr = []
@@ -151,8 +151,12 @@ def compute_after_cabin_arr(arg_class):
             zui = bzu * np.sqrt(1.0 - yi ** 2 / by ** 2)
             zli = bzl * np.sqrt(1.0 - yi ** 2 / by ** 2)
 
+            # exception
+            if np.isnan(zui):
+                zui, zli = 0, 0
+
             after_cabin_arr.append([xi, yi, zui])
-            after_cabin_arr.append([xi, yi. zli])
+            after_cabin_arr.append([xi, yi, zli])
 
     after_cabin_arr = np.array(after_cabin_arr)
 
@@ -351,12 +355,12 @@ def compute_vertical_wing(arg_class):
 
 # compute engine
 # engine which is equipped at lower part of main wing
-def compute_engine_lower_main_wing(arg_class, cabin_arr):
+def compute_engine_lower_main_wing(arg_class, main_wing_arr):
     """
     compute core engine array, which is equipped at lower main wing
 
     :param arg_class: argument class
-    :param cabin_arr: array of cabin(fuselage)
+    :param main_wing_arr: array of main wing
     :return: engine_arr(numpy ndarray)
     """
     # set required parameters
@@ -379,7 +383,7 @@ def compute_engine_lower_main_wing(arg_class, cabin_arr):
     l = l1 + l2 + l3
 
     # joint point chords
-    joint_point = [l * jmx + croot * tcx, wf + (0.5 * b - wf) * tcy, -1 * np.max(cabin_arr[:, 2])]
+    joint_point = [l * jmx + croot * tcx, wf + (0.5 * b - wf) * tcy, -1 * np.max(main_wing_arr[:, 2])]
 
     # the center coordinates of engine(z coord)
     zcen = joint_point[2] - tein - rein
@@ -424,6 +428,157 @@ def compute_engine_lower_main_wing(arg_class, cabin_arr):
     engine_arr_low = np.array(engine_arr_low)
 
     return engine_arr_low
+
+
+# engine which is equipped with upper part of main wing
+def compute_engine_upper_main_wing(arg_class, main_wing_arr):
+    """
+    compute upper main wing engine array
+
+    :param arg_class: argument class
+    :param main_wing_arr: array of main wing
+    :return: engine_arr_up(numpy ndarray)
+    """
+
+    # set required parameters
+    rein = arg_class.rein  # inlet radius of engine
+    reout = arg_class.reout  # nozzle radius of engine
+    tein = arg_class.tein  # joint margin
+    le = arg_class.le  # engine length
+    tcx = arg_class.tcx  # coefficient of x to root chord
+    tcy = arg_class.tcy  # coefficient of y to wing span
+    tcz = arg_class.tcz  # coefficient of z to cabin height
+    jmx = arg_class.jmx  # constant for x coord of mounting point
+    croot = arg_class.croot  # root chord of main wing
+    wf = arg_class.wf  # width of cabin(fuselage)
+    b = arg_class.b  # main wing span
+    l1 = arg_class.l1  # section 1 length(cockpit)
+    l2 = arg_class.l2  # section 2 length(cabin)
+    l3 = arg_class.l3  # section 3 length(after cabin)
+
+    # total cabin length
+    l = l1 + l2 + l3
+
+    # set engine joint point
+    joint_point = [l * jmx + croot * tcx, wf + (0.5 * b - wf) * tcy, np.max(main_wing_arr[:, 2])]
+    # z coord at the center of engine
+    zcen = joint_point[2] + tein + rein
+
+    # set x range
+    x = np.linspace(joint_point[0] - tcz * le, joint_point[0] + (1 - tcz) * le, 30)
+
+    # compute constant for describing engine outer line
+    az = (rein - reout) / (1 - 2 * tcz) / le ** 2
+    bz = -2 * joint_point[0] * az
+    cz = joint_point[2] + bz ** 2 / (4 * az)
+
+    # Initialize engine array
+    engine_arr_up = []
+
+    for xi in x:
+        # lower line
+        zl = az * xi ** 2 + bz * xi + cz
+        # upper line
+        zu = 2 * zcen - zl
+        # set z range
+        z = np.linspace(zl, zu, 30)
+
+        for zi in z:
+            # eclipse curve(cross section)
+            target = np.sqrt((zu - zcen) ** 2 - (zi - zcen) ** 2)
+            yui = joint_point[1] + target
+            yli = joint_point[1] - target
+
+            # add engine array
+            engine_arr_up.append([xi, yui, zi])
+            engine_arr_up.append([xi, yli, zi])
+
+            # symmetric
+            engine_arr_up.append([xi, -yui, zi])
+            engine_arr_up.append([xi, -yli, zi])
+
+    engine_arr_up = np.array(engine_arr_up)
+
+    return engine_arr_up
+
+
+# engine which is equipped with upper part of cabin(fuselage)
+def compute_engine_upper_cabin(arg_class, cabin_arr):
+    """
+    compute engine upper cabin array
+
+    :param arg_class: argument class
+    :param cabin_arr: cabin array
+    :return: engine_fus_arr_up(numpy ndarray)
+    """
+    # set required parameters
+    rein = arg_class.rein  # inlet radius of engine
+    reout = arg_class.reout  # nozzle radius of engine
+    tein = arg_class.tein  # joint margin
+    le = arg_class.le  # engine length
+    thetae = arg_class.thetae  # angle for engine equipment
+    tcx = arg_class.tcx  # coefficient of x to root chord
+    tcz = arg_class.tcz  # coefficient of z to cabin height
+    l1 = arg_class.l1  # section 1 length(cockpit)
+    l2 = arg_class.l2  # section 2 length(cabin)
+    l3 = arg_class.l3  # section 3 length(after cabin)
+
+    # total cabin length
+    l = l1 + l2 + l3
+
+    # max cabin y coords
+    eca = np.max(cabin_arr[:, 1])
+    # max cabin z coords
+    ecb = np.max(cabin_arr[:, 2])
+
+    # convert radians
+    thetae = thetae * np.pi / 180.0
+
+    # calculate distance between cabin center and engine center at yz plane
+    # original point is considered as cabin center and assume polar coordnates
+    r = np.sqrt((eca * np.cos(thetae)) ** 2 + (ecb * np.cos(thetae)) ** 2)
+
+    # set engine joint point
+    joint_point = [l * tcx, r * np.cos(thetae), r * np.sin(thetae)]
+    # z coord of center of engine
+    zcen = (r + rein + tein) * np.sin(thetae)
+
+    # compute constant for outer engine line
+    az = (rein - reout) * np.cos(thetae) / (1 - 2 * tcz) / le ** 2
+    bz = (tcz * le - 2 * joint_point[0]) * az - tein * np.cos(thetae) / (tcz * le)
+    cz = joint_point[2] - (rein + tein) * np.cos(thetae) - az * joint_point[0] ** 2 - bz * joint_point[0]
+
+    # set x range
+    x = np.linspace(joint_point[0] - tcz * le, joint_point[0] + (1 - tcz) * le, 30)
+
+    # Initialize engine arr
+    engine_fus_arr_up = []
+
+    for xi in x:
+        # engine lower line
+        zl = az * xi ** 2 + bz * xi + cz
+        # engine upper line
+        zu = 2 * zcen - zl
+        # set z range
+        z = np.linspace(zl, zu, 30)
+
+        for zi in z:
+            # eclipse line
+            target = np.sqrt((zu - zcen) ** 2 - (zi - zcen) ** 2)
+            yui = joint_point[1] + target
+            yli = joint_point[1] - target
+
+            engine_fus_arr_up.append([xi, yui, zi])
+            engine_fus_arr_up.append([xi, yli, zi])
+
+            # symmetric
+            engine_fus_arr_up.append([xi, -yui, zi])
+            engine_fus_arr_up.append([xi, -yli, zi])
+
+    engine_fus_arr_up = np.array(engine_fus_arr_up)
+
+    return engine_fus_arr_up
+
 
 
 
