@@ -1,2 +1,2 @@
-,huc,hlc,wc,hlf,huf,wf,hau,wa,l1,l2,l3,uk,ctip,croot,b,theta,jmx,jmz,pm,tcm,chtip,chroot,bh,thetah,jhx,jhz,ph,tch,cvtip,cvroot,bv,thetav,jvx,jvz,pv,tcv,rein,reout,tein,le,tcx,tcy,tcz,thetae,engine_settings
-a320,1.8,1.8,1.2,2.1,2,2,1.5,0.3,7,25,4,0.5,1,5,40,25,0.4,0,0.4,0.11,0.6,5,15,20,0.9,0,0.4,0.11,0.6,3,10,45,0.95,0,0.4,0.1,0.8,0.4,0.1,4,0.4,0.4,0.4,30,lower_mainwing
+,huc,hlc,wc,hlf,huf,wf,hau,wa,l1,l2,l3,uk,ctip,croot,b,theta,jmx,jmz,pm,tcm,chtip,chroot,bh,thetah,jhx,jhz,ph,tch,cvtip,cvroot,bv,thetav,jvx,jvz,pv,tcv,rein,reout,tein,le,tcx,tcy,tcz,thetae,engine_settings,aircraft_type,engine_type
+a320,1.8,1.8,1.2,2.1,2,2,1.5,0.3,7,25,4,0.5,1,5,40,25,0.4,0,0.4,0.11,0.6,5,15,20,0.9,0,0.4,0.11,0.6,3,10,45,0.95,0,0.4,0.1,0.8,0.4,0.1,4,0.4,0.4,0.4,30,lower_mainwing,normal,turbofan

@@ -46,8 +46,11 @@ def compute_cockpit_arr(arg_class):
 
         for yi in y:
             # eclipse
-            zui = bzu * np.sqrt(1.0 - yi ** 2 / by ** 2)
-            zli = bzl * np.sqrt(1.0 - yi ** 2 / by ** 2)
+            if by == 0:
+                zui, zli = 0, 0
+            else:
+                zui = bzu * np.sqrt(1.0 - yi ** 2 / by ** 2)
+                zli = bzl * np.sqrt(1.0 - yi ** 2 / by ** 2)
 
             cockpit_arr.append([xi, yi, zui])
             cockpit_arr.append([xi, yi, zli])
