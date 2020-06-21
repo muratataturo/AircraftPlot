@@ -1,17 +1,20 @@
-import numpy as np
 import argparse
 import pandas as pd
+
 from component import compute_cockpit_arr, compute_cabin_arr, compute_after_cabin_arr
+from component import compute_engine_upper_cabin, compute_engine_lower_main_wing, compute_engine_upper_main_wing
 from component import compute_main_wing_arr, compute_horizontal_wing, compute_vertical_wing
-from component import compute_engine_lower_main_wing, compute_engine_upper_main_wing, compute_engine_upper_cabin
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+from component import compute_distributed_fan_at_main_wing, compute_distributed_fan_upper_cabin
+
+from .helper import draw_aircraft
 
 # load arguments
 def load_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cname', default='a320', type=str)
-
+    parser.add_argument('--cname', default='a320_dist', type=str)
+    parser.add_argument('--aircraft_type', default='normal', type=str,
+                        help='1. normal, 2. drone, 3. blended wing body, 4. hyper sonic, 5. propeller')
+    parser.add_argument('--engine_type', default='distributed fan', type=str, help='1. turbofan 2. propeller 3. distributed fan(turbofan + electric fan)')
     args = parser.parse_args()
 
     return args
@@ -24,10 +27,13 @@ def insert_args():
 
     # add the arguments
     # case name
-    parser.add_argument('--cname', default='a320', type=str)
+    parser.add_argument('--cname', default='a320_dist', type=str)
     # engine settings
     parser.add_argument('--aircraft_type', default='normal', type=str)
-    parser.add_argument('--engine_settings', default='lower_mainwing', type=str, help='1.lower_mainwing, 2.upper_mainwing, 3. upper_cabin')
+    parser.add_argument('--engine_type', default='distributed fan', type=str)
+    parser.add_argument('--core_engine_settings', default='lower_mainwing', type=str, help='1.lower_mainwing, 2.upper_mainwing, 3. upper_cabin')
+    # distributed fan settings
+    parser.add_argument('--dist_fan_settings', default='lower_mainwing', type=str, help='1.lower_mainwing, 2.upper_mainwing, 3.upper_cabin')
     # cockpit
     parser.add_argument('--huc', default=1.8, type=float, help='height of upper part of cockpit [m]')
     parser.add_argument('--hlc', default=1.8, type=float, help='height of lower part of cockpit [m]')
@@ -81,8 +87,8 @@ def insert_args():
     parser.add_argument('--tcv', default=0.1, type=float, help='the ratio of thickness and chord of vertical wing')
 
     # engine
-    parser.add_argument('--rein', default=0.8, type=float, help='radius of inlet core engine [m]')
-    parser.add_argument('--reout', default=0.4, type=float, help='radius of outlet core engine [m]')
+    parser.add_argument('--rein', default=1.0, type=float, help='radius of inlet core engine [m]')
+    parser.add_argument('--reout', default=0.6, type=float, help='radius of outlet core engine [m]')
     parser.add_argument('--tein', default=0.1, type=float, help='margin for joint engine to wing [m]')
     parser.add_argument('--le', default=4.0, type=float, help='core engine length [m]')
     parser.add_argument('--tcx', default=0.4, type=float, help='x chord constant for joint engine')
@@ -91,40 +97,47 @@ def insert_args():
     # add option (upper fuselage)
     parser.add_argument('--thetae', default=30, type=float, help='turnover angle for setting engine')
 
+    # distributed fan
+    parser.add_argument('--rfin', default=0.6, type=float, help='radius of inlet electric fan')
+    parser.add_argument('--rfout', default=0.4, type=float, help='radius of outlet electric fan')
+    parser.add_argument('--tfin', default=0.1, type=float, help='margin for connecting engine to wing')
+    parser.add_argument('--nfan', default=6, type=float, help='the number of electric fan')
+    parser.add_argument('--lfan', default=2.0, type=float, help='overall length of electric fan')
+    parser.add_argument('--tfz', default=0.1, type=float, help='z chord constant for joint electric fan')
+    # add option (upper fuselage)
+    parser.add_argument('--tfx', default=0.7, type=float,
+                        help='x chord constant for joint electric fan only in case of upper fuselage option')
+    parser.add_argument('--thetaf', default=90, type=float, help='turnover angle for setting electric fan')
+
     args = parser.parse_args()
 
     return args
 
 
-# Argument class(To manage database parameters)
 class Arguments(object):
 
     def __init__(self, args):
-
         cname = args.cname
 
         fname = './AircraftData/{}.csv'.format(cname)
 
-        df = pd.read_csv(fname, index_col=0)
-        self.aircraft_type = df['aircraft_type'].values[0]
-        self.engine_settings = df['engine_settings'].values[0]
+        df = pd.read_csv(fname)
+        self.aircraft_type = args.aircraft_type
+        self.engine_type = args.engine_type
+        self.core_engine_settings = df['core_engine_settings'].values[0]
+        self.dist_fan_settings = df['dist_fan_settings'].values[0]
         self.huc = df['huc'].values[0]
         self.hlc = df['hlc'].values[0]
         self.wc = df['wc'].values[0]
-
         self.hlf = df['hlf'].values[0]
         self.huf = df['huf'].values[0]
         self.wf = df['wf'].values[0]
-
         self.hau = df['hau'].values[0]
         self.wa = df['wa'].values[0]
-
         self.l1 = df['l1'].values[0]
         self.l2 = df['l2'].values[0]
         self.l3 = df['l3'].values[0]
-
         self.uk = df['uk'].values[0]
-
         self.ctip = df['ctip'].values[0]
         self.croot = df['croot'].values[0]
         self.b = df['b'].values[0]
@@ -133,7 +146,6 @@ class Arguments(object):
         self.jmz = df['jmz'].values[0]
         self.pm = df['pm'].values[0]
         self.tcm = df['tcm'].values[0]
-
         self.chtip = df['chtip'].values[0]
         self.chroot = df['chroot'].values[0]
         self.bh = df['bh'].values[0]
@@ -142,7 +154,6 @@ class Arguments(object):
         self.jhz = df['jhz'].values[0]
         self.ph = df['ph'].values[0]
         self.tch = df['tch'].values[0]
-
         self.cvtip = df['cvtip'].values[0]
         self.cvroot = df['cvroot'].values[0]
         self.bv = df['bv'].values[0]
@@ -151,7 +162,6 @@ class Arguments(object):
         self.jvz = df['jvz'].values[0]
         self.pv = df['pv'].values[0]
         self.tcv = df['tcv'].values[0]
-
         self.rein = df['rein'].values[0]
         self.reout = df['reout'].values[0]
         self.tein = df['tein'].values[0]
@@ -160,27 +170,18 @@ class Arguments(object):
         self.tcy = df['tcy'].values[0]
         self.tcz = df['tcz'].values[0]
         self.thetae = df['thetae'].values[0]
-
-
-# draw function
-def draw_aircraft(component_dict, axis_bounds):
-
-    fig = plt.figure()
-    ax = Axes3D(fig)
-
-    for name, arr in component_dict.items():
-
-        ax.scatter(arr[:, 0], arr[:, 1], arr[:, 2])
-
-    ax.set_xlim(axis_bounds[0])
-    ax.set_ylim(axis_bounds[1])
-    ax.set_zlim(axis_bounds[2])
-
-    plt.show()
+        self.rfin = df['rfin'].values[0]
+        self.rfout = df['rfout'].values[0]
+        self.tfin = df['tfin'].values[0]
+        self.nfan = df['nfan'].values[0]
+        self.lfan = df['lfan'].values[0]
+        self.tfz = df['tfz'].values[0]
+        self.tfx = df['tfx'].values[0]
+        self.thetaf = df['thetaf'].values[0]
 
 
 if __name__ == '__main__':
-
+    # ToDo: test following code after writing a320_dist.csv
     # variables names
     names = ['huc', 'hlc', 'wc',
              'hlf', 'huf', 'wf',
@@ -190,7 +191,8 @@ if __name__ == '__main__':
              'ctip', 'croot', 'b', 'theta', 'jmx', 'jmz', 'pm', 'tcm',
              'chtip', 'chroot', 'bh', 'thetah', 'jhx', 'jhz', 'ph', 'tch',
              'cvtip', 'cvroot', 'bv', 'thetav', 'jvx', 'jvz', 'pv', 'tcv',
-             'rein', 'reout', 'tein', 'le', 'tcx', 'tcy', 'tcz', 'thetae']
+             'rein', 'reout', 'tein', 'le', 'tcx', 'tcy', 'tcz', 'thetae',
+             'rfin', 'rfout', 'tfin', 'nfan', 'lfan', 'tfz', 'tfx', 'thetaf']
 
     # data type
     mode = 'load'  # 'insert' or 'load'
@@ -202,34 +204,39 @@ if __name__ == '__main__':
         l_args = load_args()
         args = Arguments(l_args)
 
-    # main
-    # build cockpit array
+    # cockpit
     cockpit_arr = compute_cockpit_arr(args)
-    # build cabin array
+    # cabin(fuselage)
     cabin_arr = compute_cabin_arr(args)
-    # build after cabin array
+    # after cabin
     after_cabin_arr = compute_after_cabin_arr(args)
-    # build main wing array
+    # main wing
     main_wing_arr = compute_main_wing_arr(args)
-    # build horizontal wing array
+    # horizontal wing
     hori_wing_arr = compute_horizontal_wing(args)
-    # build vertical wing array
+    # vertical wing
     vert_wing_arr = compute_vertical_wing(args)
 
-    # engine part
-    if args.engine_settings == 'lower_mainwing':
+    # core engine
+    engine_arr = []
+    if args.core_engine_settings == 'lower_mainwing':
         engine_arr = compute_engine_lower_main_wing(args, main_wing_arr)
-
-    elif args.engine_settings == 'upper_mainwing':
+    elif args.core_engine_settings == 'upper_mainwing':
         engine_arr = compute_engine_upper_main_wing(args, main_wing_arr)
-
-    elif args.engine_settings == 'upper_cabin':
+    elif args.core_engine_settings == 'upper_cabin':
         engine_arr = compute_engine_upper_cabin(args, cabin_arr)
 
+    # distributed electric fan
+    distributed_fan_arr = []
+    if args.dist_fan_settings == 'lower_mainwing' or args.dist_fan_settings == 'upper_mainwing':
+        distributed_fan_arr = compute_distributed_fan_at_main_wing(args, main_wing_arr)
+    elif args.dist_fan_settings == 'upper_cabin':
+        distributed_fan_arr = compute_distributed_fan_upper_cabin(args, cabin_arr)
+
     # component names
-    component_names = ['cockpit', 'cabin', 'after_cabin', 'main_wing', 'hori_wing', 'vert_wing', 'engine']
+    component_names = ['cockpit', 'cabin', 'after_cabin', 'main_wing', 'hori_wing', 'vert_wing', 'engine', 'distributed_fan']
     # component_arrays
-    component_arrs = [cockpit_arr, cabin_arr, after_cabin_arr, main_wing_arr, hori_wing_arr, vert_wing_arr, engine_arr]
+    component_arrs = [cockpit_arr, cabin_arr, after_cabin_arr, main_wing_arr, hori_wing_arr, vert_wing_arr, engine_arr, distributed_fan_arr]
 
     # create component dictionary
     component_dict = {}
@@ -237,14 +244,8 @@ if __name__ == '__main__':
     for key, val in zip(component_names, component_arrs):
         component_dict[key] = val
 
-    # draw aircraft
+    # description
     axis_bounds = [[-10, 40], [-20, 20], [-15, 15]]
     draw_aircraft(component_dict, axis_bounds)
-
-
-
-
-
-
 
 

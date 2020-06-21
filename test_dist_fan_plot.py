@@ -346,7 +346,7 @@ rfin = 0.6
 rfout = 0.4
 lower = -1
 
-r_afford = 0.1
+r_afford = 0.1  # margin for radius of electric fan
 
 theta = retreat_angle
 
@@ -546,8 +546,8 @@ tin = 0.1
 k = 0.4
 len = 5.0
 
-theta = 90
-tx = 0.7
+theta = 90  # setting electric fan's angle
+tx = 0.7  # x chord constant for upper fuselage
 
 eca = np.max(cabin_arr[:, 1])
 ecb = np.max(cabin_arr[:, 2])

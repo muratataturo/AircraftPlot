@@ -8,7 +8,9 @@ from helper import draw_aircraft
 def load_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--cname', default='drone', type=str)
-
+    parser.add_argument('--aircraft_type', default='drone', type=str,
+                        help='1. normal, 2. drone, 3. distributed fan, 4. blended wing body, 5. hyper sonic, 6. propeller')
+    parser.add_argument('--engine_type', default='propeller', type=str, help='1. turbofan 2. propeller')
     args = parser.parse_args()
 
     return args
@@ -64,6 +66,7 @@ def insert_args():
     args = parser.parse_args()
 
     return args
+
 
 # Argument class(To manage database parameters)
 class Arguments(object):
@@ -133,7 +136,7 @@ if __name__ == '__main__':
     after_cabin_arr = compute_after_cabin_arr(args)
 
     # propeller
-    propeller_arr, arm_arr = compute_propeller_with_normal_position(cabin_arr, args)
+    propeller_arr, arm_arr = compute_propeller_with_normal_position(args, cabin_arr)
 
     # component names
     component_names = ['cockpit', 'cabin', 'after_cabin', 'propeller', 'arm']

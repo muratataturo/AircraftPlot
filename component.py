@@ -583,8 +583,146 @@ def compute_engine_upper_cabin(arg_class, cabin_arr):
     return engine_fus_arr_up
 
 
+# compute distributed electric fan
+# distributed electric fan equipping with some parts of main wing(upper or lower)
+def compute_distributed_fan_at_main_wing(arg_class, main_wing_arr):
+    # distributed fan parameters
+    nfan = arg_class.nfan  # the number of distributed electric fan
+    rfin = arg_class.rfin  # radius of distributed electric fan
+    rfout = arg_class.rfout  # radius of distributed electric fan
+    r_margin = 0.1  # margin for radius of electric fan
+    theta = arg_class.theta * np.pi / 180.0  # retreat angle
+    tfin = arg_class.tfin  # margin for connecting a distributed electric fan to wing
+    lfan = arg_class.lfan  # overall length of distributed electric fan
+    tfz = arg_class.tfz  # z coord constant for joint
+
+    # core engine and main wing parameters
+    jmx = arg_class.jmx  # x coord coefficient of joint main wing
+    tcx = arg_class.tcx  # x chord constant for joint core engine
+    tcy = arg_class.tcy  # y chord constant for joint core engine
+    wf = arg_class.wf  # width of cabin(fuselage)
+    b = arg_class.b  # width of main wing
+    croot = arg_class.croot  # root chord of main wing
+    l = arg_class.l1 + arg_class.l2 + arg_class.l3  # fuselage(cabin) length
+
+    # sign which indicates where to joint
+    if arg_class.dist_fan_settings == 'lower_mainwing':
+        sign = -1
+    else:
+        sign = 1
+
+    # joint point's coords
+    joint_point_init = [l * jmx + croot * tcx, wf + (b / 2 - wf) * tcy, sign * np.max(main_wing_arr[:, 2])]
+    # distributed fan array
+    distributed_fan_arr = []
+
+    for n in range(nfan):
+        diff_r = (1.0 + r_margin) * 2 * (n + 1)  # determine setting point
+        joint_point = [joint_point_init[0] + diff_r * np.sin(theta),
+                       joint_point_init[1] + diff_r * np.cos(theta),
+                       joint_point_init[2]]
+        # center of z coord
+        zcen = joint_point_init[2] - tfin - rfin
+
+        # x range
+        x = np.linspace(joint_point[0] - tfz * lfan, joint_point[0] + (1.0 - tfz) * lfan, 30)
+
+        # parabola curve parameters => z = a * x** 2 + b * x + c
+        az = sign * (rfin - rfout) / (1 - 2 * tfz) / lfan ** 2
+        bz = -2 * joint_point[0] * az
+        cz = joint_point[2] + bz ** 2 / (4 * az)
+
+        for xi in x:
+            # upper line coords
+            zu = az * xi ** 2 + bz * xi + cz
+            # lower line coords
+            zl = 2 * zcen - zu
+
+            # z range
+            z = np.linspace(zl, zu, 30)
+
+            # eclipse curve
+            for zi in z:
+                target = np.sqrt((zu - zcen) ** 2 - (zi - zcen) ** 2)
+                yui = joint_point[0] + target
+                yli = joint_point[0] - target
+
+                distributed_fan_arr.append([xi, yui, zi])
+                distributed_fan_arr.append([xi, yli, zi])
+                # symmetric
+                distributed_fan_arr.append([xi, -yui, zi])
+                distributed_fan_arr.append([xi, -yli, zi])
+
+    distributed_fan_arr = np.array(distributed_fan_arr)
+
+    return distributed_fan_arr
+
+
+# distributed electric fan equipping with upper cabin(fuselage)
+def compute_distributed_fan_upper_cabin(arg_class, cabin_arr):
+    # distributed fan parameters
+    nfan = arg_class.nfan  # the number of distributed electric fan
+    rfin = arg_class.rfin  # radius of distributed electric fan
+    rfout = arg_class.rfout  # radius of distributed electric fan
+    theta = arg_class.theta * np.pi / 180.0  # retreat angle
+    tfin = arg_class.tfin  # margin for connecting a distributed electric fan to wing
+    lfan = arg_class.lfan  # overall length of distributed electric fan
+    tfz = arg_class.tfz  # z coord constant for joint
+    tfx = arg_class.tfx  # x coord constant for joint at cabin
+    thetaf = arg_class.thetaf * np.pi / 180.0  # joint angle of distributed electric fan
+
+    l = arg_class.l1 + arg_class.l2 + arg_class.l3  # cabin length
+
+    eca = np.max(cabin_arr[:, 1])
+    ecb = np.max(cabin_arr[:, 2])
+
+    # distance between cabin center and distributed electric fan center
+    r = np.sqrt((eca * np.cos(thetaf)) ** 2 + (ecb * np.sin(thetaf)) ** 2)
+
+    # joint point
+    joint_point = [l * tfx, r * np.cos(thetaf), r * np.sin(thetaf)]
+
+    # center of z coords
+    zcen = (r + rfin + tfin) * np.sin(thetaf)
+
+    # parabola curve parameters
+    az = (rfin - rfout) * np.cos(thetaf) / (1 - 2 * tfz) / lfan ** 2
+    bz = (tfz * lfan - 2 * joint_point[0]) * az - tfin * np.cos(thetaf) / (tfz * lfan)
+    cz = joint_point[2] - (rfin + tfin) * np.cos(thetaf) - az * joint_point[0] ** 2 - bz * joint_point[0]
+
+    # x range
+    x = np.linspace(joint_point[0] - tfz * lfan, joint_point[0] + (1.0 - tfz) * lfan, 30)
+
+    distributed_fan_upp_arr = []
+
+    for xi in x:
+        # distributed fan outer line
+        zl = az * xi ** 2 + bz * xi + cz
+        zu = zl + (zcen - zl) * 2
+
+        # z range
+        z = np.linspace(zl, zu, 30)
+
+        for zi in z:
+            target = np.sqrt((zu - zcen) ** 2 - (zi - zcen) ** 2)
+            yui = joint_point[1] + target
+            yli = joint_point[1] - target
+
+            distributed_fan_upp_arr.append([xi, yui, zi])
+            distributed_fan_upp_arr.append([xi, yli, zi])
+
+            if thetaf * 180 / np.pi == 90:
+                distributed_fan_upp_arr.append([xi, -yui, zi])
+                distributed_fan_upp_arr.append([xi, -yli, zi])
+
+    distributed_fan_upp_arr = np.array(distributed_fan_upp_arr)
+
+    return distributed_fan_upp_arr
+
+
+# compute propeller
 # propeller engine with standard position
-def compute_propeller_with_normal_position(cabin_arr, arg_class):
+def compute_propeller_with_normal_position(arg_class, cabin_arr):
     """
     compute propeller array and connected arm array
 
