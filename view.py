@@ -225,8 +225,11 @@ class AircraftView(object):
 
         component_names = None
 
+        # aircraft type => 1. normal, 2. drone, 3. distributed fan, 4. blended wing body, 5. hyper sonic, 6. propeller
         if self.arg_class.aircraft_type == 'normal':
             component_names = ['cockpit', 'cabin', 'after_cabin', 'main_wing', 'hori_wing', 'vert_wing', 'engine']
+        elif self.arg_class.aircraft_type == 'drone':
+            component_names = ['cockpit', 'cabin', 'after_cabin', 'propeller', ]
 
         return component_names
 

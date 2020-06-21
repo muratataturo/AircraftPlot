@@ -216,10 +216,10 @@ def turnover_3d(theta, n):
 txs = [0.2, 0.5, 0.8]
 thetas = [30, 90, 150]
 
-radius = 1.0
-pr = 0.5
-lp = 0.5
-zdiffp = 0.4
+radius = 1.0  # radius of propeller curve(the collection of propellers)
+pr = 0.5  # radius of each propeller
+lp = 0.5  # length of arm
+zdiffp = 0.4  # shift setting position ratio
 
 k = 0.3
 
@@ -270,7 +270,7 @@ propeller_arr_r = np.array(propeller_arr_r)
 propeller_arr = np.concatenate([propeller_arr_l, propeller_arr_r], axis=0)
 
 # pole
-poll_r = 0.1
+poll_r = 0.1  # arm radius
 
 poll_arr = []
 

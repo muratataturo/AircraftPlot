@@ -1,5 +1,5 @@
 import numpy as np
-from helper import bezier
+from helper import bezier, turnover_3d
 # helper function for view
 
 
@@ -581,6 +581,135 @@ def compute_engine_upper_cabin(arg_class, cabin_arr):
     engine_fus_arr_up = np.array(engine_fus_arr_up)
 
     return engine_fus_arr_up
+
+
+# propeller engine with standard position
+def compute_propeller_with_normal_position(cabin_arr, arg_class):
+    """
+    compute propeller array and connected arm array
+
+    :param cabin_arr: numpy array of cabin
+    :param arg_class: argument class
+    :return: propeller_arr, arm_arr
+    """
+
+    l1 = arg_class.l1
+    l2 = arg_class.l2
+    l3 = arg_class.l3
+
+    # fuselage length
+    l = l1 + l2 + l3
+
+    # propeller setting ratio
+    txs = arg_class.txs  # the ratio of setting position corresponding to overall length
+    angles = arg_class.angles  # angle of arm which is connected with a propeller
+
+    # outer line of the collection of propeller
+    radius = arg_class.radius
+    # the radius of each propeller
+    pr = arg_class.pr
+    # the arm length
+    lp = arg_class.lp
+    # setting shift
+    zdiffp = arg_class.zdiffp
+
+    # setting coefficient for arm on z axis
+    k = arg_class.k
+
+    # argm radius
+    arm_r = arg_class.arm_r
+
+    # propeller number(because of symmetric, get the half number of propellers)
+    half_propeller_number = len(txs)
+
+    # coords of joint point
+    joint_points = []
+    for idx in range(half_propeller_number):
+        point = [l * txs[idx], np.max(cabin_arr[:, 1]), idx * zdiffp]
+        joint_points.append(point)
+
+    # coords of propellers at left side
+    propeller_arr_l = []
+    # coords of propellers at right side
+    propeller_arr_r = []
+
+    for angle, joint_point in zip(angles, joint_points):
+        angle = 180 - angle
+        angle = angle * np.pi / 180.0
+        # get center coords
+        center = np.array([joint_point[0] + (radius + pr) * np.cos(angle),
+                           joint_point[1] + (radius + pr) * np.sin(angle),
+                           joint_point[2]])
+
+        # z range
+        z = np.linspace(-k * lp + joint_point[2], (1 - k) * lp + joint_point[2], 30)
+
+        for zi in z:
+
+            # x range(create circle)
+            x = np.linspace(center[0] - pr, center[0] + pr, 30)
+
+            for xi in x:
+                target = np.sqrt(pr ** 2 - (xi - center[0]) ** 2)
+                yui = center[1] + target
+                yli = center[1] - target
+
+                # left side
+                plu = [xi, yui, zi]
+                pll = [xi, yli, zi]
+                propeller_arr_l.append(plu)
+                propeller_arr_l.append(pll)
+
+                # right side
+                pru = [xi, -yui, zi]
+                prl = [xi, -yli, zi]
+                propeller_arr_r.append(pru)
+                propeller_arr_r.append(prl)
+
+
+    propeller_arr_r = np.array(propeller_arr_r)
+    propeller_arr_l = np.array(propeller_arr_l)
+
+    # put together propeller arr
+    propeller_arr = np.concatenate([propeller_arr_l, propeller_arr_r], axis=0)
+
+    # create arm
+    arm_arr = []
+    # right part
+    x = np.linspace(0, radius + pr, 30)
+    for xi in x:
+        y = np.linspace(-arm_r, arm_r, 30)
+
+        for yi in y:
+            target = np.sqrt(arm_r ** 2 - yi ** 2)
+            zui = target
+            zli = -target
+
+            pu = [xi, yi, zui]
+            pl = [xi, yi, zli]
+
+            for idx in range(half_propeller_number):
+                rep_j = joint_points[idx]
+                angle = angles[idx]
+
+                # turn over 3d on z axis against upper part
+                angle_u = -1 * (180 - angle) * np.pi / 180.0
+                t_arr_u = turnover_3d(angle_u, np.array([0, 0, 1]))
+
+                # turn over 3d on z axis against left part
+                angle_l = 180 * np.pi / 180.0
+                t_arr_l = turnover_3d(angle_l, np.array([0, 0, 1]))
+
+                puu = np.dot(t_arr_u.T, np.array(pu)) + np.array(rep_j)
+                pll = np.dot(t_arr_l.T, puu) + np.array([l, 0, -2 * zdiffp * idx + (half_propeller_number - 1) * zdiffp])
+
+                arm_arr.append(puu.tolist())
+                arm_arr.append(pll.tolist())
+
+    arm_arr = np.array(arm_arr)
+
+    return propeller_arr, arm_arr
+
 
 
 
