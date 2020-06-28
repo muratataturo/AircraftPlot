@@ -6,7 +6,7 @@ from component import compute_engine_upper_cabin, compute_engine_lower_main_wing
 from component import compute_main_wing_arr, compute_horizontal_wing, compute_vertical_wing
 from component import compute_distributed_fan_at_main_wing, compute_distributed_fan_upper_cabin
 
-from .helper import draw_aircraft
+from helper import draw_aircraft
 
 # load arguments
 def load_args():
@@ -192,7 +192,8 @@ if __name__ == '__main__':
              'chtip', 'chroot', 'bh', 'thetah', 'jhx', 'jhz', 'ph', 'tch',
              'cvtip', 'cvroot', 'bv', 'thetav', 'jvx', 'jvz', 'pv', 'tcv',
              'rein', 'reout', 'tein', 'le', 'tcx', 'tcy', 'tcz', 'thetae',
-             'rfin', 'rfout', 'tfin', 'nfan', 'lfan', 'tfz', 'tfx', 'thetaf']
+             'rfin', 'rfout', 'tfin', 'nfan', 'lfan', 'tfz', 'tfx', 'thetaf',
+             'core_engine_settings', 'dist_fan_settings']
 
     # data type
     mode = 'load'  # 'insert' or 'load'
@@ -230,7 +231,7 @@ if __name__ == '__main__':
     distributed_fan_arr = []
     if args.dist_fan_settings == 'lower_mainwing' or args.dist_fan_settings == 'upper_mainwing':
         distributed_fan_arr = compute_distributed_fan_at_main_wing(args, main_wing_arr)
-    elif args.dist_fan_settings == 'upper_cabin':
+    if args.dist_fan_settings == 'upper_cabin':
         distributed_fan_arr = compute_distributed_fan_upper_cabin(args, cabin_arr)
 
     # component names

@@ -307,7 +307,6 @@ ty = 0.2
 k = 0.4
 
 joint_point_ml = [l * jmx + croot * tx, wf + (b / 2 - wf) * ty, lower * np.max(main_wing_arr[:, 2])]
-
 zcen = joint_point_ml[2] - tin - rin
 
 # engine curve -> z = ax ** 2 + b * x + c
@@ -366,6 +365,8 @@ for n in range(nfan):
     joint_point = [joint_point_init[0] + diff_r * np.sin(theta * np.pi / 180.0), joint_point_init[1] + diff_r * np.cos(theta * np.pi / 180.0), joint_point_init[2]]
     zcen = joint_point[2] - tin - rin
 
+    print(joint_point[2], tin, rin, zcen)
+
     # engine curve -> z = ax ** 2 + b * x + c
     x = np.linspace(joint_point[0] - k * lfan, joint_point[0] + (1 - k) * lfan, 30)
 
@@ -406,7 +407,6 @@ ty = 0.3
 
 k = 0.4
 joint_point_mu = [l * jmx + croot * tx, wf + (b / 2 - wf) * ty, np.max(main_wing_arr[:, 2])]
-
 zcen = joint_point_mu[2] + tin + rin
 
 # engine curve -> z = ax ** 2 + b * x + c

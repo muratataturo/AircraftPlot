@@ -622,7 +622,7 @@ def compute_distributed_fan_at_main_wing(arg_class, main_wing_arr):
                        joint_point_init[1] + diff_r * np.cos(theta),
                        joint_point_init[2]]
         # center of z coord
-        zcen = joint_point_init[2] - tfin - rfin
+        zcen = joint_point[2] + sign * (tfin + rfin)
 
         # x range
         x = np.linspace(joint_point[0] - tfz * lfan, joint_point[0] + (1.0 - tfz) * lfan, 30)
@@ -644,8 +644,8 @@ def compute_distributed_fan_at_main_wing(arg_class, main_wing_arr):
             # eclipse curve
             for zi in z:
                 target = np.sqrt((zu - zcen) ** 2 - (zi - zcen) ** 2)
-                yui = joint_point[0] + target
-                yli = joint_point[0] - target
+                yui = joint_point[1] + target
+                yli = joint_point[1] - target
 
                 distributed_fan_arr.append([xi, yui, zi])
                 distributed_fan_arr.append([xi, yli, zi])
@@ -711,7 +711,7 @@ def compute_distributed_fan_upper_cabin(arg_class, cabin_arr):
             distributed_fan_upp_arr.append([xi, yui, zi])
             distributed_fan_upp_arr.append([xi, yli, zi])
 
-            if thetaf * 180 / np.pi == 90:
+            if thetaf * 180 / np.pi != 90:
                 distributed_fan_upp_arr.append([xi, -yui, zi])
                 distributed_fan_upp_arr.append([xi, -yli, zi])
 
